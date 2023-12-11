@@ -6,43 +6,43 @@ import cv2
 from streamlit_drawable_canvas import st_canvas
 
 
-def convertto_watercolorsketch(inp_img, sigma_s, sigma_r):
-    if inp_img is not None:
-        img_1 = cv2.edgePreservingFilter(inp_img, flags=2, sigma_s=sigma_s, sigma_r=sigma_r)
-        img_water_color = cv2.stylization(img_1, sigma_s=sigma_s * 2, sigma_r=sigma_r * 2)
-        return img_water_color
-    else:
-        return None
-
+# def convertto_watercolorsketch(inp_img, sigma_s, sigma_r):
+#     if inp_img is not None:
+#         img_1 = cv2.edgePreservingFilter(inp_img, flags=2, sigma_s=sigma_s, sigma_r=sigma_r)
+#         img_water_color = cv2.stylization(img_1, sigma_s=sigma_s * 2, sigma_r=sigma_r * 2)
+#         return img_water_color
+#     else:
+#         return None
+#
 def numpy_to_pil_image(numpy_image):
     return Image.fromarray(numpy_image)
-
-# import io
-
-def simulate_drawing(image, sigma_s, sigma_r):
-    images_per_row = 5
-    # num_rows = (num_steps - 1) // images_per_row + 1
-
-    # Create a column to display the final result image
-    final_result_column = st.columns(1)
-    with final_result_column[0]:
-        st.image(image, width=500, caption="Final Result")
-
-    drawing_image = np.array(image)
-
-    # for row in range(num_rows):
-    #     columns = st.columns(images_per_row)
-    #     for i in range(images_per_row):
-    #         step = num_steps - (row * images_per_row + i)
-    #         if step >= 1:
-    #             with columns[i]:
-    #                 if step > 1:
-    #                     drawing_image = convertto_watercolorsketch(
-    #                         drawing_image, sigma_s, sigma_r
-    #                     )
-    #                 st.image(drawing_image, width=125, caption=f"Step {step}")
-
-
+#
+# # import io
+#
+# def simulate_drawing(image, sigma_s, sigma_r):
+#     images_per_row = 5
+#     # num_rows = (num_steps - 1) // images_per_row + 1
+#
+#     # Create a column to display the final result image
+#     final_result_column = st.columns(1)
+#     with final_result_column[0]:
+#         st.image(image, width=500, caption="Final Result")
+#
+#     drawing_image = np.array(image)
+#
+#     # for row in range(num_rows):
+#     #     columns = st.columns(images_per_row)
+#     #     for i in range(images_per_row):
+#     #         step = num_steps - (row * images_per_row + i)
+#     #         if step >= 1:
+#     #             with columns[i]:
+#     #                 if step > 1:
+#     #                     drawing_image = convertto_watercolorsketch(
+#     #                         drawing_image, sigma_s, sigma_r
+#     #                     )
+#     #                 st.image(drawing_image, width=125, caption=f"Step {step}")
+#
+#
 
 def watetSketch(inp_img):
     inp_img = np.array(inp_img, dtype="uint8")
@@ -126,17 +126,15 @@ def main():
             st.image(load_an_image(image_file), width=500)
 
             if option == 'Drawing Water Color':
-                sigma_s = 50
-                sigma_r = 0.3
-                sigma_s = st.slider("Sigma_s (Scale Spatial)", 1, 200, sigma_s)
-                sigma_r = st.slider("Sigma_r (Scale Range)", 0.01, 1.0, sigma_r)
+                # sigma_s = 50
+                # sigma_r = 0.3
+                # sigma_s = st.slider("Sigma_s (Scale Spatial)", 1, 200, sigma_s)
+                # sigma_r = st.slider("Sigma_r (Scale Range)", 0.01, 1.0, sigma_r)
                 # num_steps = st.slider("Number of Steps", 1, 20, 5)
 
                 # result_image = convertto_watercolorsketch(np.array(input_image), sigma_s, sigma_r)
                 # simulate_drawing(result_image, sigma_s, sigma_r)
                 result_image = watetSketch(input_image)
-                sigma_s = 50
-                sigma_r = 0.3
                 buf = BytesIO()
                 final_pil_image = numpy_to_pil_image(result_image)
                 final_pil_image.save(buf, format="PNG")
@@ -152,7 +150,7 @@ def main():
             if option == 'Drawing Pencil':
                 image = Image.open(image_file)
                 final_sketch = pencilsketch(np.array(image))
-                im_pil = Image.fromarray(final_sketch)
+                im_pil = numpy_to_pil_image(final_sketch)
 
                 buf = BytesIO()
                 im_pil.save(buf, format="PNG")
