@@ -1,6 +1,6 @@
 streamlit
-pillow
+Pillow
 numpy
-opencv-python
+opencv-python-headless
 streamlit_drawable_canvas
 rembg
