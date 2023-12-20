@@ -6,8 +6,6 @@ import cv2
 from streamlit_drawable_canvas import st_canvas
 from rembg import remove
 
-with open('style.css') as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 def numpy_to_pil_image(numpy_image):
     return Image.fromarray(numpy_image)
 
