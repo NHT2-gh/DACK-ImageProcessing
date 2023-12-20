@@ -4,8 +4,10 @@ from io import BytesIO
 import numpy as np
 import cv2
 from streamlit_drawable_canvas import st_canvas
+from rembg import remove
 
-
+with open('style.css') as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 def numpy_to_pil_image(numpy_image):
     return Image.fromarray(numpy_image)
 
@@ -134,8 +136,10 @@ def cartoonizePhoto(img):
 
     contoured_image = np.copy(res2)
     gray = cv2.cvtColor(contoured_image, cv2.COLOR_BGR2GRAY)
-    edged = cv2.Canny(gray, 100, 200, L2gradient=True)
-    contours, hierarchy = cv2.findContours(edged,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    gray_blur = cv2.GaussianBlur(gray, (3, 3), 2)
+    edged = cv2.Canny(gray_blur, 100, 200, L2gradient=True)
+    contours, hierarchy = cv2.findContours(edged,
+                                           cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     cv2.drawContours(contoured_image, contours, contourIdx=-1, color=1, thickness=1)
 
     st.subheader("Cartoonize")
@@ -143,26 +147,53 @@ def cartoonizePhoto(img):
     with result[0]:
         st.image(contoured_image, width=500, caption="Final Result")
 
-    list_img = [image, res2, gray, edged, contoured_image]
-    steps_colomns = st.columns(4)
+    list_img = [image, res2, gray, gray_blur, edged, contoured_image]
+    steps_colomns = st.columns(5)
     y = 0
     for i in range(len(list_img)):
         if y >= 4:
             y = 0
         with steps_colomns[y]:
-            st.image(list_img[i], width=150, caption=f"Step {i + 1}")
+            st.image(list_img[i], width=120, caption=f"Step {i + 1}")
         y = y + 1
 
     return contoured_image
 
 
-def oilPaint(img):
-    res = cv2.xphoto.oilPainting(img, 7, 1)
-    st.subheader("Oil Paint")
-    result = st.columns(1)
-    with result[0]:
-        st.image(res, width=500, caption="Final Result")
-    return res
+def process_image(input_image):
+    # Tách nền
+    output_image = remove(input_image)
+
+    return output_image
+
+def flip_image(image, direction="horizontal"):
+    if direction == "horizontal":
+        return cv2.flip(image, 1)
+    elif direction == "vertical":
+        return cv2.flip(image, 0)
+
+def apply_pixelate(image, pixel_size=10):
+    h, w, _ = image.shape
+    small = cv2.resize(image, (w // pixel_size, h // pixel_size), interpolation=cv2.INTER_LINEAR)
+    return cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
+
+def image_editor(image, editor_option):
+    if editor_option == 'Flip Horizontal':
+        processed_image = flip_image(image, direction="horizontal")
+    elif editor_option == 'Flip Vertical':
+        processed_image = flip_image(image, direction="vertical")
+    elif editor_option == 'None':
+        pass
+
+    return processed_image
+
+# def oilPaint(img):
+#     res = cv2.xphoto.oilPainting(img, 7, 1)
+#     st.subheader("Oil Paint")
+#     result = st.columns(1)
+#     with result[0]:
+#         st.image(res, width=500, caption="Final Result")
+#     return res
 
 def main():
 
@@ -175,8 +206,9 @@ def main():
                             'Drawing Pencil',
                             'Drawing Water Color',
                             'Cartoon',
-                            'Oil Paint',
                             'Edit Image',
+                            'Pixelate',
+                            'Remove Background',
                             'Free Drawing'))
 
     if option != 'Free Drawing':
@@ -186,19 +218,11 @@ def main():
         if image_file is not None:
 
             input_image = load_an_image(image_file)
-            st.subheader("Original Image")
 
+            st.subheader("Original Image")
             st.image(load_an_image(image_file), width=500)
 
             if option == 'Drawing Water Color':
-                # sigma_s = 50
-                # sigma_r = 0.3
-                # k_size = st.slider("sigmaX_soft", 1, 100, 51)
-                # sigmaX_blur = st.slider("sigmaX_blur", 1, 100, 25)
-                # num_steps = st.slider("Number of Steps", 1, 20, 5)
-
-                # result_image = convertto_watercolorsketch(np.array(input_image), sigma_s, sigma_r)
-                # simulate_drawing(result_image, sigma_s, sigma_r)
                 result_image = waterSketch(input_image)
                 buf = BytesIO()
                 final_pil_image = numpy_to_pil_image(result_image)
@@ -225,6 +249,7 @@ def main():
                     file_name="pencil.png",
                     mime="image/png"
                 )
+
             if option == 'Cartoon':
                 image = Image.open(image_file)
                 final_sketch = cartoonizePhoto(image)
@@ -240,6 +265,24 @@ def main():
                     mime="image/png"
                 )
 
+            if option == 'Pixelate':
+                img_array = np.array(input_image)
+                pixel_size = st.slider("Select Pixel Size:", 1, 50, 10)
+                processed_image = apply_pixelate(img_array, pixel_size)
+                st.subheader("Pixelate Image")
+                st.image(processed_image, width=500)
+
+            if option == 'Remove Background':
+
+                if image_file is not None:
+                    # Đọc ảnh từ file uploader
+                    input_image = Image.open(image_file)
+
+                    # Xử lý ảnh
+                    processed_image = process_image(input_image)
+                    st.subheader("Processed Image")
+                    st.image(processed_image, width=500)
+
             if option == 'Oil Paint':
                 image = Image.open(image_file)
                 final_sketch = oilPaint(np.array(image))
@@ -254,8 +297,11 @@ def main():
                     file_name="oilPaint.png",
                     mime="image/png"
                 )
+
             if option == 'Edit Image':
+
                 if image_file is not None:
+
                     original_image = Image.open(image_file)
                     img_array = np.array(original_image)
                     #  st.image(original_image, caption="Original Image", use_column_width=True)
@@ -268,9 +314,12 @@ def main():
                     sharpness_factor = st.sidebar.slider("Sharpness", 0.1, 10.0, 1.0)
                     blur_radius = st.sidebar.slider("Blur Radius", 0.0, 10.0, 0.0)
 
+
                     # Thêm thanh trượt cho giảm nhiễu
                     noise_strength = st.sidebar.slider("Noise Reduction", 0.0, 20.0, 0.0)
 
+                    editor_option = st.sidebar.selectbox('Choose Flip Option',
+                                                         ('None', 'Flip Horizontal', 'Flip Vertical'))
                     # Apply adjustments
                     adjusted_image = original_image.copy()
                     adjusted_image = adjust_brightness(adjusted_image, brightness_factor)
@@ -284,6 +333,8 @@ def main():
                     img_array = np.array(adjusted_image)
                     im_pil = Image.fromarray(img_array)
 
+                    if editor_option != 'None':
+                        adjusted_image = image_editor(img_array, editor_option)
                     st.image(adjusted_image, width=500)
 
                     buf = BytesIO()
